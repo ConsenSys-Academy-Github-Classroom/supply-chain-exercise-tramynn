@@ -4,15 +4,22 @@ pragma solidity >=0.5.16 <0.9.0;
 contract SupplyChain {
 
   // <owner>
-
+  address public owner = msg.sender;
   // <skuCount>
-
+  uint public skuCount;
   // <items mapping>
-
+  mapping( address => uint ) public items;
   // <enum State: ForSale, Sold, Shipped, Received>
-
+  enum State { ForSale, Sold, Shipped, Received }
   // <struct Item: name, sku, price, state, seller, and buyer>
-  
+  struct Item {
+    string name;
+    uint sku;
+    uint price;
+    State state;
+    address payable seller;
+    address payable buyer;
+  }
   /* 
    * Events
    */

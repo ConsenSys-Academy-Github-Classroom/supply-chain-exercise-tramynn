@@ -4,7 +4,7 @@ pragma solidity >=0.5.16 <0.9.0;
 contract SupplyChain {
 
   // <owner>
-  address public owner = msg.sender;
+  address public owner;
   // <skuCount>
   uint public skuCount;
   // <items mapping>
@@ -39,7 +39,7 @@ contract SupplyChain {
 
   // Create a modifer, `isOwner` that checks if the msg.sender is the owner of the contract
   modifier isOwner (address _owner) {
-    require( msg.sender == _owner );
+    require( msg.sender == _owner, "Owner must be the same as the message sender." );
     _;
   }
   // <modifier: isOwner
@@ -100,51 +100,74 @@ contract SupplyChain {
 
   function addItem(string memory _name, uint _price) public returns (bool) {
     // 1. Create a new item and put in array
-    // 2. Increment the skuCount by one
-    // 3. Emit the appropriate event
-    // 4. return true
-
     // hint:
-    // items[skuCount] = Item({
-    //  name: _name, 
-    //  sku: skuCount, 
-    //  price: _price, 
-    //  state: State.ForSale, 
-    //  seller: msg.sender, 
-    //  buyer: address(0)
-    //});
-    //
-    //skuCount = skuCount + 1;
-    // emit LogForSale(skuCount);
-    // return true;
+    items[skuCount] = Item( {
+      name: _name, 
+      sku: skuCount, 
+      price: _price, 
+      state: State.ForSale, 
+      seller: msg.sender, 
+      buyer: address(0)
+    });
+    // 2. Increment the skuCount by one
+    skuCount = skuCount + 1;
+    // 3. Emit the appropriate event
+    emit LogForSale(skuCount);
+    // 4. return true
+    return true;
   }
 
   // Implement this buyItem function. 
-  // 1. it should be payable in order to receive refunds
-  // 2. this should transfer money to the seller, 
-  // 3. set the buyer as the person who called this transaction, 
-  // 4. set the state to Sold. 
-  // 5. this function should use 3 modifiers to check 
-  //    - if the item is for sale, 
-  //    - if the buyer paid enough, 
-  //    - check the value after the function is called to make 
-  //      sure the buyer is refunded any excess ether sent. 
-  // 6. call the event associated with this function!
-  function buyItem(uint sku) public {}
+  function buyItem(uint _sku)
+    // 1. it should be payable in order to receive refunds
+    public 
+    payable
+    //    - if the item is for sale, 
+    forSale(_sku)
+    //    - if the buyer paid enough, 
+    paidEnough(items[_sku].price)
+    //    - check the value after the function is called to make 
+    //      sure the buyer is refunded any excess ether sent. 
+    checkValue(_sku)
+  {
+    // 2. this should transfer money to the seller,
+    items[_sku].seller.transfer(items[_sku].price);
+    // 3. set the buyer as the person who called this transaction, 
+    items[_sku].buyer = msg.sender;
+    // 4. set the state to Sold. 
+    items[_sku].state = State.Sold;
+    // 6. call the event associated with this function!
+    emit LogSold( _sku );
+  }
 
+  function shipItem(uint _sku) 
   // 1. Add modifiers to check:
+    public
   //    - the item is sold already 
+    sold(_sku)
   //    - the person calling this function is the seller. 
+    verifyCaller(items[_sku].seller)
+  {
   // 2. Change the state of the item to shipped. 
+    items[_sku].state = State.Shipped;
   // 3. call the event associated with this function!
-  function shipItem(uint sku) public {}
+    emit LogShipped(_sku);
+  }
 
-  // 1. Add modifiers to check 
-  //    - the item is shipped already 
-  //    - the person calling this function is the buyer. 
   // 2. Change the state of the item to received. 
   // 3. Call the event associated with this function!
-  function receiveItem(uint sku) public {}
+  function receiveItem(uint _sku) 
+    public
+    //    - the item is shipped already 
+    shipped(_sku)
+    //    - the person calling this function is the buyer.
+    verifyCaller(items[_sku].buyer)
+  {
+    // 2. Change the state of the item to received. 
+    items[_sku].state = State.Received;
+    // 3. Call the event associated with this function!
+    emit LogReceived(_sku);
+  }
 
   // Uncomment the following code block. it is needed to run tests
   function fetchItem(uint _sku) public view
